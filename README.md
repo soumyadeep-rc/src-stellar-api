@@ -22,3 +22,4 @@ The platform acts as an automated escrow and registry for API services:
 * **Network:** Stellar Testnet (Futurenet)
 * **Contract Address:** `[YOUR_DEPLOYED_CONTRACT_ADDRESS_HERE]`
 * **Stellar Expert Link:** `[LINK_TO_STELLAR_EXPERT_EXPLORER]`
+<img width="1918" height="964" alt="image" src="https://github.com/user-attachments/assets/6eb18104-337e-40c3-b280-036f7cfbc1cb" />
