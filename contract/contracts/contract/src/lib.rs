@@ -3,77 +3,75 @@ use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Str
 
 #[contracttype]
 pub enum DataKey {
-    ApiCount,
-    Api(u64), 
-    Subscription(Address, u64), 
-    Balance(u64), 
+    SkillCount,
+    Skill(u64), 
+    Escrow(Address, u64), // Maps Student Address + Skill ID to locked funds
 }
 
 #[contracttype]
-pub struct ApiDetails {
+pub struct SkillDetails {
     pub provider: Address,
-    pub endpoint_url: String,
-    pub price_per_month: i128,
+    pub description: String,
+    pub price_per_hour: i128,
 }
 
 #[contract]
-pub struct ApiMarketplaceContract;
+pub struct SkillSwapContract;
 
 #[contractimpl]
-impl ApiMarketplaceContract {
+impl SkillSwapContract {
     
-    /// List a new API on the marketplace (Permissionless)
-    pub fn list_api(env: Env, provider: Address, endpoint_url: String, price_per_month: i128) -> u64 {
+    /// PERMISSIONLESS: Anyone can list a skill to teach
+    pub fn list_skill(env: Env, provider: Address, description: String, price_per_hour: i128) -> u64 {
         provider.require_auth();
 
-        let mut count: u64 = env.storage().instance().get(&DataKey::ApiCount).unwrap_or(0);
+        let mut count: u64 = env.storage().instance().get(&DataKey::SkillCount).unwrap_or(0);
         count += 1;
 
-        let api_details = ApiDetails {
+        let skill_details = SkillDetails {
             provider,
-            endpoint_url,
-            price_per_month,
+            description,
+            price_per_hour,
         };
 
-        env.storage().instance().set(&DataKey::Api(count), &api_details);
-        env.storage().instance().set(&DataKey::ApiCount, &count);
+        env.storage().instance().set(&DataKey::Skill(count), &skill_details);
+        env.storage().instance().set(&DataKey::SkillCount, &count);
 
         count 
     }
 
-    /// Subscribe to an API by paying the required fee into the contract's escrow
-    pub fn subscribe(env: Env, consumer: Address, api_id: u64, duration_months: u64, token: Address) {
-        consumer.require_auth();
+    /// Book a session by locking funds in the contract escrow
+    pub fn book_session(env: Env, student: Address, skill_id: u64, hours: u64, token: Address) {
+        student.require_auth();
 
-        let api: ApiDetails = env.storage().instance().get(&DataKey::Api(api_id)).expect("API not found");
-        let total_cost = api.price_per_month * (duration_months as i128);
+        let skill: SkillDetails = env.storage().instance().get(&DataKey::Skill(skill_id)).expect("Skill not found");
+        let total_cost = skill.price_per_hour * (hours as i128);
 
-        // Transfer payment from consumer to the contract
+        // Transfer payment from student to the contract
         let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&consumer, &env.current_contract_address(), &total_cost);
+        token_client.transfer(&student, &env.current_contract_address(), &total_cost);
 
-        // Credit the provider's balance
-        let mut balance: i128 = env.storage().instance().get(&DataKey::Balance(api_id)).unwrap_or(0);
-        balance += total_cost;
-        env.storage().instance().set(&DataKey::Balance(api_id), &balance);
-
-        env.storage().persistent().set(&DataKey::Subscription(consumer, api_id), &duration_months);
+        // Update the student's escrow balance for this specific skill
+        let mut current_escrow: i128 = env.storage().instance().get(&DataKey::Escrow(student.clone(), skill_id)).unwrap_or(0);
+        current_escrow += total_cost;
+        env.storage().instance().set(&DataKey::Escrow(student, skill_id), &current_escrow);
     }
 
-    /// Withdraw earnings (Only the specific API provider can call this)
-    pub fn withdraw(env: Env, provider: Address, api_id: u64, token: Address) {
-        provider.require_auth();
+    /// Release funds to the provider once the session is completed
+    pub fn release_payment(env: Env, student: Address, skill_id: u64, token: Address) {
+        // Only the student who booked can release the funds
+        student.require_auth();
 
-        let api: ApiDetails = env.storage().instance().get(&DataKey::Api(api_id)).expect("API not found");
-        assert!(api.provider == provider, "Not authorized");
-
-        let balance: i128 = env.storage().instance().get(&DataKey::Balance(api_id)).unwrap_or(0);
-        assert!(balance > 0, "No pending earnings");
+        let skill: SkillDetails = env.storage().instance().get(&DataKey::Skill(skill_id)).expect("Skill not found");
+        let escrow_amount: i128 = env.storage().instance().get(&DataKey::Escrow(student.clone(), skill_id)).unwrap_or(0);
+        
+        assert!(escrow_amount > 0, "No funds in escrow for this skill");
 
         // Zero the balance before transfer to prevent re-entrancy
-        env.storage().instance().set(&DataKey::Balance(api_id), &0_i128);
+        env.storage().instance().set(&DataKey::Escrow(student.clone(), skill_id), &0_i128);
 
+        // Transfer funds from contract to the provider
         let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&env.current_contract_address(), &provider, &balance);
+        token_client.transfer(&env.current_contract_address(), &skill.provider, &escrow_amount);
     }
 }
