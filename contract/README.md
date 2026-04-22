@@ -1,22 +1,27 @@
-# Soroban Project
+# Minimalist Skill Swap - Stellar dApp
 
-## Project Structure
+A decentralized peer-to-peer skill exchange platform built on the **Stellar Network**. This project allows users to list professional skills and set prices in XLM, with all data managed by a Soroban smart contract for transparency and security.
 
-This repository uses the recommended structure for a Soroban project:
+## 📜 Smart Contract Details
+- **Network:** Stellar Testnet
+- **Contract ID:** `CASUHNYZIGURGPYQTPOV7MQFYVBQM3EK234PK7N46AYMGVYNITQDQEJC`
+- **Language:** Rust (Soroban SDK)
 
-```text
-.
-├── contracts
-│   └── hello_world
-│       ├── src
-│       │   ├── lib.rs
-│       │   └── test.rs
-│       └── Cargo.toml
-├── Cargo.toml
-└── README.md
-```
+## 💻 Tech Stack
+- **Smart Contract:** Soroban (Rust)
+- **Frontend:** Next.js 14+ (App Router)
+- **Styling:** CSS-in-JS (Minimalist)
+- **Wallet Integration:** @stellar/freighter-api
 
-- New Soroban contracts can be put in `contracts`, each in their own directory. There is already a `hello_world` contract in there to get you started.
-- If you initialized this project with any other example contracts via `--with-example`, those contracts will be in the `contracts` directory as well.
-- Contracts should have their own `Cargo.toml` files that rely on the top-level `Cargo.toml` workspace for their dependencies.
-- Frontend libraries can be added to the top-level directory as well. If you initialized this project with a frontend template via `--frontend-template` you will have those files already included.
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- **Freighter Wallet:** Installed as a browser extension.
+- **Node.js:** v18+
+- **Rust & Soroban CLI:** For backend interactions.
+
+### 2. Installation
+```bash
+git clone <your-repository-url>
+cd client
+npm install
